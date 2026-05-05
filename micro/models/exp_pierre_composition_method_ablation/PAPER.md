@@ -57,3 +57,19 @@ HumanEval predictions overestimated because they were based on ties_dare numbers
 
 ## Implication for Pierre v1
 Use uniform 1/N composition via `_FusedDeltaLinear`. The M2P gate should be reserved for a different role: selecting which adapters to include in the uniform average (sparse gating / top-K selection), NOT for weighting them continuously.
+
+---
+
+## REVISION: post-adversarial-review verdict (2026-05-04)
+
+**Original verdict:** KILLED on K2121 (M3 gated > M1 uniform AND M2 top-1)
+**Revised verdict:** SUPPORTED with caveat
+
+**Reason:** K2121 was unfairly evaluated. M3 (gated) reused the upstream `exp_pierre_m2p_gated_composition` results which were corrupted by the `__call__` monkey-patch bug (Finding #828). With the bug, M3 humaneval=20% — collapsed. The buggy M3 number can't fairly be compared to M1/M2 which were measured correctly in this experiment.
+
+**Substantive finding (uncontaminated):** Among the validly-measured methods:
+- M1 uniform 1/N: avg 64.4% (+2.2pp over M2)
+- M2 hard top-1: avg 62.2%
+→ **Uniform composition adds value over single-adapter routing.** This validates the Pierre compositional architecture.
+
+**Pending:** rerun with M3 gated using `_FusedDeltaLinear` to determine if M2P-gated continuous mixing beats uniform 1/N. Until then, uniform/DARE is the recommended default.

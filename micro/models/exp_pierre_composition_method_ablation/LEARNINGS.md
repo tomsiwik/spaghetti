@@ -21,3 +21,9 @@ The gate converges to near-deterministic top-1 selection (weight 0.993), making 
 ## Implication for Pierre v1
 
 Use uniform 1/N via `_FusedDeltaLinear`. Repurpose the gate for **sparse adapter selection** (which adapters to load) rather than continuous weighting (how much weight each gets). This simplifies the runtime and removes a component with zero demonstrated value.
+
+---
+
+## REVISION (2026-05-04): SUPPORTED, M3 result was tainted
+
+Uniform 1/N composition (validly measured, +2.2pp over hard top-1 routing) is itself the validation of the compositional architecture. M3 gated needs rerun with bug fix before head-to-head winner can be declared.

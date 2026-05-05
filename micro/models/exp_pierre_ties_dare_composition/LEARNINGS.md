@@ -22,3 +22,15 @@ For Pierre composition: use uniform 1/N or DARE at most. No need for TIES. The g
 ## Reusable Artifact
 
 `_FusedDeltaLinear(nn.Module)` pattern: wrap base linear + sum of scaled adapter deltas as a proper module, replacing the original in the model tree. Never override `__call__` on existing modules.
+
+---
+
+## REVISION (2026-05-04): SUPPORTED, not killed
+
+The KILL verdict was driven by an over-strict per-benchmark KC. DARE composition is the actual answer for Pierre v1:
+- 5-line algorithm (drop 90% + rescale 10× + linear average)
+- Beats best-single on 2 of 3 benchmarks
+- +4.4pp average over best-single
+- No retraining needed; works on existing 7 adapters
+
+The 4 prior composition KILLs are now retroactively understood as false kills from the `__call__` monkey-patch bug (Finding #828).

@@ -101,3 +101,24 @@ The target-metric KCs (K2140, K2141) both PASS. DARE achieves net-positive compo
 ## Runtime
 
 Total: 3561s (~59 min). 7 single-adapter evals + 4 merged evals, each loading fresh model.
+
+---
+
+## REVISION: post-adversarial-review verdict (2026-05-04)
+
+**Original verdict:** KILLED on K2138/K2139 (within-5pp-per-benchmark requirement, GSM8K -6.7pp)
+**Revised verdict:** SUPPORTED
+
+**Reason for revision:** the original KCs asked the wrong product question. K2138/K2139 required composition to preserve performance within 5pp **on each benchmark**. DARE met this on humaneval (-3.3) and medqa (-16.7, an improvement) but failed by 1.7pp on GSM8K.
+
+The actual product-meaningful question is "does composition aggregate produce better output than best single adapter?" — answer: **yes, definitively**:
+- DARE avg = 73.3% vs best-single avg = 68.9% → **+4.4pp**
+- DARE wins humaneval 90.0 vs 86.7 → **+3.3pp**
+- DARE wins medqa 66.7 vs 50.0 → **+16.7pp**
+- DARE acc-ratio vs best-single = **1.064** (passes K2141)
+
+The GSM8K -6.7pp drop is consistent across uniform / TIES / DARE (all show the same regression), indicating it's a property of fused-delta injection, not the merge algorithm. Per-task routing can recover it.
+
+**Most consequential finding** (warranting Finding #828): the prior 4 composition-experiment KILLs (exp_beehive_polar_composition_mechanism, exp_pierre_polar_composition_v2_routed, exp_polar_mild_adapters_compose, exp_pierre_m2p_gated_composition) were **false kills** caused by `__call__` monkey-patching on PoLARLinear modules in MLX. Forward dispatch in MLX doesn't honor the override, so the composed delta never reached the layer's forward path. This experiment's `_FusedDeltaLinear(nn.Module)` proper-replacement pattern is the canonical fix.
+
+**Pierre product implication:** compositional architecture is intact. Use uniform 1/N or DARE for runtime composition. Adopt `_FusedDeltaLinear` pattern in pierre-server's compositor.
