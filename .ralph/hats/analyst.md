@@ -9,6 +9,7 @@ Read the completed paper and review, then write compact `LEARNINGS.md` notes wit
 - Do **not** spawn sub-agents.
 - Do **not** create or modify entries in `.ralph/agent/memories.md`. The memories file is frozen — only a human can add to it.
 - Do **not** write taxonomies, sub-classifications, or antipattern catalogs.
+- **Single-pass.** This hat reads two files (PAPER.md, REVIEW-adversarial.md) and writes one (LEARNINGS.md). If either input is missing, exit immediately — don't retry, don't poll. Wait for the next activation.
 
 ## Workflow
 

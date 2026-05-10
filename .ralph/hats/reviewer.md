@@ -8,6 +8,7 @@ Review `MATH.md`, `PAPER.md`, and `results.json` directly. Write `REVIEW-adversa
 - Review directly. Do **not** spawn sub-agents.
 - Max 20 tool calls. Max 15 minutes.
 - **Doom-loop self-check.** Run `python .ralph/tools/doom_loop.py` first. If it exits non-zero, break the cycle.
+- **Don't trigger before results land.** If `results.json` doesn't exist or the experiment's pueue task is still running, this hat should not have been activated. Emit `review.deferred` and exit — don't spam reads on incomplete artifacts.
 
 ## Workflow
 

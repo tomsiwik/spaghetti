@@ -1,0 +1,87 @@
+{
+  "config": {
+    "model": "mlx-community/gemma-4-e4b-it-4bit",
+    "n_eval_per_bench": 50,
+    "seed": 42,
+    "rank": 6,
+    "scale": 6.0,
+    "shared_A_donor": "strategy_full",
+    "n_adapters": 7,
+    "adapter_names": [
+      "strategy_full",
+      "strategy_prepare",
+      "strategy_act",
+      "strategy_integrate",
+      "domain_math",
+      "domain_code",
+      "domain_medical"
+    ],
+    "method_under_test": "fisher_rao_K2_strategy_full+domain_medical",
+    "method_kind": "b_only",
+    "method_kwargs": {},
+    "fisher_rao_reference_avg": 64.7,
+    "dare_research_reference_avg": 71.3,
+    "pair": "strategy_full+domain_medical",
+    "K": 2
+  },
+  "methods": {
+    "single_best": {
+      "per_bench": {
+        "medqa": 42.0
+      },
+      "avg": 42.0
+    },
+    "fisher_rao": {
+      "gsm8k": 64.0,
+      "humaneval": 57.99999999999999,
+      "medqa": 40.0,
+      "avg": 54.0
+    },
+    "fisher_rao_K2_strategy_full+domain_medical": {
+      "gsm8k": 64.0,
+      "humaneval": 57.99999999999999,
+      "medqa": 40.0,
+      "avg": 54.0,
+      "preprocess_seconds": 0.009021997451782227
+    },
+    "dare_full_delta": {
+      "gsm8k": 74.0,
+      "humaneval": 62.0,
+      "medqa": 50.0,
+      "avg": 62.0
+    }
+  },
+  "kc_thresholds": {
+    "k1_min_delta_over_fisher_rao": 0.0,
+    "k2_max_delta_under_full_delta_dare": 4.0,
+    "k3_max_preprocess_seconds": 5.0,
+    "k4_label": "K=2 pair strategy_full+domain_medical",
+    "k4_value": null,
+    "k4_threshold": null
+  },
+  "kill_criteria": {
+    "K1_beats_fisher_rao": {
+      "pass": true,
+      "delta_pp": 0.0,
+      "threshold_pp": 0.0
+    },
+    "K2_close_to_full_delta_dare": {
+      "pass": false,
+      "abs_delta_pp": 8.0,
+      "threshold_pp": 4.0
+    },
+    "K3_preprocess_within_budget": {
+      "pass": true,
+      "elapsed_s": 0.009021997451782227,
+      "threshold_s": 5.0
+    },
+    "K4_sanity": {
+      "pass": false,
+      "label": "K=2 pair strategy_full+domain_medical",
+      "value": null,
+      "threshold": null
+    }
+  },
+  "verdict": "SUPPORTED",
+  "decision": "Adopt fisher_rao_K2_strategy_full+domain_medical: beats Fisher-Rao by +0.0pp; gap to full-delta DARE is 8.0pp (worse than budget)"
+}

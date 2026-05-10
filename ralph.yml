@@ -72,11 +72,13 @@ hats:
       - "review.revise"
     publishes:
       - "experiment.done"
-    default_publishes: "experiment.done"
+      - "research.waiting"   # silent no-op while pueue job is mid-run; no hat subscribes
+    default_publishes: "research.waiting"   # safe default: do not trigger reviewer when nothing landed
     instructions: |
       Read `.ralph/hats/researcher.md` and follow it.
       Read `PLAN.md` Part 2 for current research focus.
       PRIORITY: experiments that TRAIN ADAPTERS or RUN REAL MLX CODE come first. Skip doc-only work.
+      EMIT `experiment.done` ONLY when results.json exists with a populated verdict. While the experiment is mid-run, EXIT WITHOUT EMITTING (ralph defaults to `research.waiting`, which no hat triggers on). Ralph's idle_timeout (1200s) re-activates this hat naturally.
 
   reviewer:
     name: "🔴 Reviewer"
