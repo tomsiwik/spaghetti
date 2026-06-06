@@ -63,7 +63,7 @@ hats:
       - "--model"
       - "claude-opus-4-6"
       - "--append-system-prompt-file"
-      - "EXPERIMENT.md"
+      - "experiments/GUIDE.md"
       - "--max-turns"
       - "100"
     triggers:

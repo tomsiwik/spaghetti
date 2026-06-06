@@ -4,9 +4,9 @@ __pycache__/
 .worktrees/
 
 # Large model files (keep local)
-adapters/*/adapter_model.safetensors
-adapters/*/tokenizer.json
-adapters/*/tokenizer_config.json
+data/adapters/*/adapter_model.safetensors
+data/adapters/*/tokenizer.json
+data/adapters/*/tokenizer_config.json
 *.safetensors
 *.gguf
 *.bin
@@ -19,14 +19,14 @@ adapters/*/tokenizer_config.json
 *.pickle
 
 # Training data (keep local)
-data/distillation/*/train.jsonl
-data/distillation/*/train_split.jsonl
-data/distillation/*/val.jsonl
+data/corpora/distillation/*/train.jsonl
+data/corpora/distillation/*/train_split.jsonl
+data/corpora/distillation/*/val.jsonl
 
 # Training datasets (reproducible via HF datasets / scripts)
 *.parquet
 *.jsonl
-micro/**/data/
+experiments/**/data/
 results/**/data/
 results/**/checkpoint-*/
 
@@ -39,7 +39,7 @@ results/*.csv
 *.db-shm
 
 # Large experiment results (some contain full hidden states/embeddings)
-micro/**/results.json
+experiments/**/results.json
 
 # Paper2code work directory
 .paper2code_work/
@@ -67,3 +67,7 @@ bun.lock
 # uv.lock — committed for reproducible installs
 .archive/
 *.npy
+
+# graphify knowledge-graph outputs (regenerable)
+graphify-out/
+**/graphify-out/

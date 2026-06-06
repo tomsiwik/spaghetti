@@ -26,7 +26,7 @@ if [ -f "$SENTINEL" ]; then
     # → fall through to claim next experiment (full workflow below)
   else
     # Time to check status. Single check, no spam.
-    RESULTS="micro/models/$EXP/results.json"
+    RESULTS="experiments/models/$EXP/results.json"
     if [ -f "$RESULTS" ]; then
       echo "DONE: results.json exists for $EXP"
       rm "$SENTINEL"
@@ -111,7 +111,7 @@ EOF
    # Sleep within the activation (~8 min — under Bash 10-min ceiling).
    # On wake, check ONCE for completion. Don't loop.
    sleep 480
-   if [ -f micro/models/<exp>/results.json ]; then
+   if [ -f experiments/models/<exp>/results.json ]; then
      echo "DONE"
    else
      pueue status -j 2>/dev/null | grep -q "\"$TASK\".*\"Done\"" && echo "DONE" || echo "STILL_RUNNING"
@@ -135,13 +135,13 @@ EOF
 
    ```bash
    # Status check on resume — single call, then decide.
-   if [ -f micro/models/<exp>/results.json ]; then
+   if [ -f experiments/models/<exp>/results.json ]; then
      rm .ralph/agent/researcher_wait_state.txt
      # → proceed to PAPER.md + emit experiment.done
    else
      # Still running. Sleep again, recheck, exit silent if still not done.
      sleep 480
-     if [ -f micro/models/<exp>/results.json ]; then
+     if [ -f experiments/models/<exp>/results.json ]; then
        rm .ralph/agent/researcher_wait_state.txt
        # → proceed
      else
@@ -163,7 +163,7 @@ EOF
    When `results.json` lands, read it once, write PAPER.md, then emit `experiment.done` (this is the only path where you emit).
 
 5. **Complete:** Check verdict consistency (results.json matches PAPER.md matches DB status), then:
-   `experiment complete <id> --status supported|killed --dir micro/models/<name>/ --k <id>:pass|fail --evidence "summary"`
+   `experiment complete <id> --status supported|killed --dir experiments/models/<name>/ --k <id>:pass|fail --evidence "summary"`
 
 6. Update `.ralph/current_direction.md`, emit `experiment.done`.
 

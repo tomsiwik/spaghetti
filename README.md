@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source srcset="assets/logo-dark.svg" media="(prefers-color-scheme: dark)">
-    <source srcset="assets/logo-light.svg" media="(prefers-color-scheme: light)">
-    <img src="assets/logo-light.svg" alt="spaghetti logo">
+    <source srcset="docs/assets/logo-dark.svg" media="(prefers-color-scheme: dark)">
+    <source srcset="docs/assets/logo-light.svg" media="(prefers-color-scheme: light)">
+    <img src="docs/assets/logo-light.svg" alt="spaghetti logo">
   </picture>
 </p>
 <p align="center">Throw it at the wall and see what sticks.</p>
@@ -25,13 +25,22 @@ Works for any domain: ML research, due diligence, SEO testing, marketing experim
 ### Structure
 
 ```
-packages/cli/       # experiment CLI (oclif + Bun)
-packages/db/        # database schema and client (Drizzle ORM + Turso)
-micro/              # small-scale experiments
-macro/              # full-scale validation
-references/         # source material and notes
-scripts/            # tooling and automation
+pierre/             # live MLX code: composition core + merge/ libraries
+experiments/        # the research log — models/ (micro, local MLX), macro/ (GPU/RunPod),
+                    #   _runs/ (job + run logs), GUIDE.md (how to run experiments)
+tooling/            # experiment framework: packages/ (CLI + DB), scripts/, tools/
+data/               # adapters/ (trained weights + registry) + corpora/ (datasets)
+docs/               # guides/ (MLX, adapters) · research/ (notes) · references/ (papers) ·
+                    #   archive/ (superseded) · assets/
 ```
+
+### Where to look
+| For… | Read |
+|---|---|
+| What's true now (verified state) | `STATUS.md` |
+| **How to run experiments** (the canonical process) | `experiments/GUIDE.md` |
+| Roadmap + platform (base model, next gate) | `PLAN.md` |
+| Agent entry point | `AGENTS.md` |
 
 ### Setup from scratch
 

@@ -6,84 +6,9 @@
 
 ## Part 1 — Framework (stable)
 
-### What this repo is
-A structured experiment framework. Hypotheses are claimed, run, reviewed, and recorded in a queryable database. The framework itself is domain-agnostic (see `README.md`); the current research instance happens to be Pierre (Part 2).
+The experiment process — lifecycle, proof-first discipline, target-gated kill rule (F#666), verdict consistency, the 3-hat loop, antipatterns, SIGREG, and forbidden classes — is now consolidated in **`experiments/GUIDE.md`** (the single canonical "how agents run experiments" doc). Read it there; this section is intentionally a pointer to avoid duplication.
 
-### Experiment lifecycle
-```
-claim → MATH.md (theorem + predictions + KC) → run_experiment.py
-     → results.json → PAPER.md (prediction vs measurement)
-     → REVIEW-adversarial.md → experiment complete → finding-add
-```
-
-Three hats automate this via `ralph.yml`:
-
-| Hat | Role | Produces |
-|---|---|---|
-| 🔬 Researcher | design + run experiments | `MATH.md`, `run_experiment.py`, `PAPER.md` |
-| 🔴 Reviewer | adversarial check | `REVIEW-adversarial.md`, verdict routing |
-| 🧠 Analyst | synthesis | `LEARNINGS.md`, new `type: fix` memories |
-
-State lives on disk (`.ralph/`, `micro/models/<exp>/`). Memories auto-inject at every hat activation (2000-token budget); new antipatterns become memories and propagate.
-
-### Proof-first research (constructive mathematics)
-Every experiment requires a formal proof **before** code:
-
-1. **Identify the failure mode** — what specific degenerate behavior is prevented?
-2. **Cite prior math** — JL-lemma, Welch bound, contractions, etc. No analogies.
-3. **Derive a guarantee** — theorem/lemma that makes the failure impossible or bounds it.
-4. **Predict specific numbers** — the proof makes quantitative predictions.
-5. **Pre-register kill criteria** — thresholds come from the proof, not from arbitrary choice.
-
-Three experiment types:
-- **Verification** — proof complete, experiment confirms predictions.
-- **Guided exploration** — proven framework, unknown parameter within it.
-- **Frontier extension** — proven result being extended into new territory; mark the gap.
-
-### Behavioral outcomes over metrics
-PPL, cosine, accuracy are proxies. PPL does not predict task quality in this project (measured r≈0.08). The real questions: does the system produce useful output? does it advance the vision? A metric improving without behavioral progress is not a finding.
-
-### Target-gated kill rule (Finding #666)
-A kill criterion on a **proxy metric** (classification accuracy, routing match rate, PPL, cosine, clustering purity) does **not** alone justify killing an experiment. Every proxy-metric KC must be **paired with an explicit target-metric KC** that measures the actual downstream claim (task accuracy, behavioral quality, oracle-gap, benchmark score).
-
-- **KILL** requires: proxy-KC FAIL **AND** target-KC FAIL.
-- **SUPPORTED** requires: proxy-KC PASS **AND** target-KC PASS.
-- **Proxy FAIL + target PASS** = finding about the proxy (the proxy is mis-calibrated for this mechanism), not a kill. File a follow-up that replaces the proxy with a better one.
-- **Proxy PASS + target FAIL** = proxy passed by construction; kill with the target reason and flag the proxy as tautological.
-
-Origin: `exp_softmax_router_scaling` (Finding #666, conclusive). Softmax router scored 40% per-sample classification accuracy (proxy FAIL at 50% threshold) but achieved oracle γ exactly (target PASS at 0% gap) via semantic-cluster routing — within-cluster misclassification is quality-benign. Without the paired target-KC the experiment would have been wrongly killed; with it, the mechanism became discoverable.
-
-**Retroactive implication:** any prior killed experiment where the kill KC was a proxy without a target-metric control may be a false kill; re-review on request.
-
-### Kill-criteria discipline
-Pre-register K1/K2/K3 in `MATH.md` before the first run. If v1 data falsifies a KC, the status is `killed` — not "criterion reformulated". If the KC needs to change, design a v2 experiment with the new KC; don't edit the old one in place.
-
-### Verdict consistency
-Before `experiment complete --status supported`, the following must all hold:
-
-1. `results.json["verdict"]` is not `"KILLED"`.
-2. `results.json["all_pass"]` is `True` (if present).
-3. `PAPER.md` verdict line does not contain `PROVISIONAL`, `PARTIALLY SUPPORTED`, `NOT SUPPORTED`, `INCONCLUSIVE`, `DEGENERATE`.
-4. `is_smoke: true` runs complete as `provisional`, never `supported`/`killed`.
-5. No KC was modified between MATH.md (git history) and now.
-6. No auto-injected `type: fix` antipattern applies to the code.
-
-### Antipattern catalog
-Kept as `type: fix` memories in `.ralph/agent/memories.md` (auto-injected). Current set: composition math bugs, tautological routing, unsafe adapter scales, KC-swap-after-failure, verdict-DB mismatch, smoke-as-full, tautological KCs, thinking-mode truncation, wrong-model proxy, synthetic padding, `shutil.copy` as new adapter, hardcoded `"pass": True`, file-existence cache, copy-paste scaffolding, dispatch-kill mislabel. Analyst appends new ones as the loop discovers them.
-
-### SIGREG reasoning chain
-Apply to every hypothesis:
-- Are you treating symptoms or the disease?
-- What structure makes the failure geometrically impossible?
-- Derive from existing math, not from analogy.
-- Each eliminated hyperparameter is one understood degree of freedom.
-
-Anchors: LeJEPA (`arxiv:2511.08544`), LeWorldModel (`arxiv:2603.19312`).
-
-### Forbidden experiment classes
-- Information-theory analogies without LLM evidence.
-- Data-structure routing analogies (skip-lists, hash rings, cuckoo, bloom) unless paper-grounded for LLM/LoRA.
-- Mechanisms with no prior paper for LLM/LoRA use.
+One-line: a structured experiment framework — hypotheses are claimed, run, reviewed, and recorded in a queryable DB; proof-first (`MATH.md` before code); every claim needs a behavioral target-metric KC.
 
 ---
 
@@ -98,7 +23,7 @@ A coding agent where every conversation trains a composable domain expert (adapt
 - **Target hardware**: Apple M5 Pro 48GB. **MLX only — no CUDA, no RunPod, no torch on GPU.** The machine is unified-memory Metal-optimized; MLX is the native path and produces dramatically better code and runtime behaviour on this hardware.
 - **Base model**: `mlx-community/gemma-4-e4b-it-4bit` (dev) / `mlx-community/gemma-4-26b-a4b-it-4bit` (prod). BitNet-2B-4T is retained only as a tok/s speed-ceiling reference (165.6 tok/s), not as product base.
 - **Adapter approach**: Standard LoRA r=6 via `mlx_lm.lora`. Current trained adapters (math, code, medical) are on `q_proj` per `exp_p1_t2_single_domain_training`. Future adapters should target `v_proj+o_proj` per F#627. Grassmannian A-matrices and PoLAR are research goals, not current reality.
-- **Trained adapter weights**: `adapters/{math,python,medical}/adapters.safetensors` (copied from `micro/models/exp_p1_t2_single_domain_training/adapters/`). Finance and legal are config-only stubs (no trained weights).
+- **Trained adapter weights**: `adapters/{math,python,medical}/adapters.safetensors` (copied from `experiments/models/exp_p1_t2_single_domain_training/adapters/`). Finance and legal are config-only stubs (no trained weights).
 
 ### Adapter vocabulary (glossary)
 Pierre uses three distinct adapter kinds. They share LoRA shape but train and compose differently. Use the matching tag when filing experiments.
@@ -134,18 +59,15 @@ Skipping these skills is the single biggest cause of broken MLX code in past exp
 - Composition must happen in continuous space; ternary/quantized composition requires explicit handling (BitNet foundations).
 - Thinking mode (Gemma 4 `<|channel>thought...`) must be preserved during training and eval, or reasoning degrades.
 
-### Deep reference (outside repo)
-The vision/architecture is maintained **outside this repo** (chat + parent dir) to keep the framework clean:
-- `../VISION_P1.md` — current full architecture
-- `../ARCHITECTURE_P1.md` — mathematical reference
-- `../PIERRE.md` — product framing
+### Deep reference
+The verified, DB-reconciled state of truth is **`STATUS.md`** at the repo root (the 2026-06-03 checkpoint). Read it before repeating any headline claim — the old in-repo vision docs drifted a thesis ahead of the data and are frozen in `docs/archive/2026-06-03-superseded/`.
 
-Do **not** duplicate their content here. Summarize only what's needed for day-to-day experiment work.
+Do **not** fork a new `VISION_*.md`. When direction shifts, edit Part 2 here and append a checkpoint entry to `STATUS.md §7`.
 
-### Current phase (as of 2026-04-17)
-Repo-wide audit completed (62 batches, 615 experiments). Confirmed systemic issues: composition bug shipped in v1 code, tautological routing in Pierre v3–v6, LORA_SCALE=20 inflating claims, thinking-mode truncation giving false domain gains. Recovery work: re-validate supported findings, rerun affected composition experiments with correct `Σ B_i @ A_i` math.
+### Current phase (as of 2026-06-03 — Checkpoint 0)
+Research checkpoint completed: 937 experiments / 845 findings reconciled against the product docs (see `STATUS.md`). The strategy-transfer / orthogonal-composition thesis is **refuted** by the May-2026 frontier (F#827/837/844/822/823). Verified ceiling: K=7 static Fisher-Rao ≈64–68% avg (+2–4pp over base); solo adapters lift on-domain (+22–62pp) but interfere off-domain (−12..−14pp); M2P/MEMENTO/Hedgehog are dead or never-run. Earlier systemic issues (v1 composition bug, tautological routing v3–v6, LORA_SCALE=20 inflation, thinking-mode truncation) are confirmed and now superseded by the reconciled status.
 
-DB state: 720 experiments (77 new follow-ups/Gemma 4 recreates imported), 91 status updates applied (24 resurrects + 67 reruns → open with audit-rerun tags).
+**Next gate:** pick one Road from `STATUS.md §5` and run one VERIFY→INTEGRATE→MEASURE cycle (recommended: Road 1, single-domain hot-swap MVP — no composition required).
 
 ### Active workstreams
 - **P11** — reasoning training recipe (s1K, LIMO, GRPO, ThinkPO, Plan-and-Solve).
@@ -209,5 +131,5 @@ Validation protocol:
 
 - **This document is the central piece.** When research direction shifts, edit Part 2 here — don't fork into a new VISION.md.
 - Part 1 changes only when a framework principle has been falsified or extended (rare). Treat it as settled unless a finding forces an update.
-- Part 2 changes freely. Keep it short; push deep details to parent docs or `micro/models/<exp>/PAPER.md`.
+- Part 2 changes freely. Keep it short; push deep details to parent docs or `experiments/models/<exp>/PAPER.md`.
 - New antipatterns → memory entries (`.ralph/agent/memories.md`, `type: fix`), not here.

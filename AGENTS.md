@@ -1,14 +1,23 @@
-- Use `experiment` CLI for tracking experiments
+# AGENTS.md — start here
 
-## Research Loop
+MLX-native, Apple-Silicon research repo for composable LoRA-adapter experiments on Gemma-4. Read these three, in order:
 
-1. Load `experiment` skill to familiarize yourself with the cli
-2. Check `experiment list -s open` for open experiments
-3. Run `experiment claim` to get next experiment
-4. If no `run_experiment.py` exists: write MATH.md to evaluate the math on the experiment + script (invoke /fast-mlx /mlx-dev skills first)
-5. Run: `experiment run <id>` to execute script (uses `pueue` and it will be queued)
-6. Read `results.json` after experiment ran (can take a while). Write PAPER.md with prediction-vs-measurement table.
-7. Review own work: write REVIEW-adversarial.md (max 3 blocking issues)
-8. Complete: `experiment complete <including all props>`
-9. Record: `experiment finding-add <including all props>`
-10. Loop to step 1
+1. **`STATUS.md`** — what is actually true now (verified against the experiment DB; the source of truth). Read before repeating any claim.
+2. **`experiments/GUIDE.md`** — **how to run experiments** (the loop, proof-first discipline, kill/verdict rules, CLI, platform rules). The canonical process doc.
+3. **`PLAN.md`** — current roadmap + platform (base model, adapter recipe, next gate).
+
+## Repo map (5 folders)
+
+| Folder | What |
+|---|---|
+| `pierre/` | live MLX code — composition core (`pierre.py`) + `merge/` (merge libraries) |
+| `experiments/` | the research log — `models/` (local MLX), `macro/` (GPU), `_runs/`, shared lib, `GUIDE.md` |
+| `tooling/` | framework — `packages/` (experiment CLI + Turso DB), `scripts/`, `tools/` |
+| `data/` | `adapters/` (weights + registry) + `corpora/` (datasets) |
+| `docs/` | guides, reference, research notes, archive |
+
+## Non-negotiables
+
+- Track every experiment with the **`experiment` CLI** (load the `experiment` skill for flags). Run experiments via `experiment run <id>` — never bare `uv run python`.
+- **Invoke `/mlx-dev` and `/fast-mlx` before writing MLX code.**
+- Proof-first: `MATH.md` (theorem + pre-registered kill criteria) before code. Every claim needs a behavioral target-metric KC (`experiments/GUIDE.md §3`).

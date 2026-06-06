@@ -1,6 +1,6 @@
 [submodule "references/LLMs-from-scratch"]
-	path = references/LLMs-from-scratch
+	path = docs/references/LLMs-from-scratch
 	url = https://github.com/rasbt/LLMs-from-scratch.git
 [submodule "references/reasoning-from-scratch"]
-	path = references/reasoning-from-scratch
+	path = docs/references/reasoning-from-scratch
 	url = https://github.com/rasbt/reasoning-from-scratch.git
