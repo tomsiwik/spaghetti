@@ -1,0 +1,21 @@
+{
+  "$comment": "Conductor launch settings — pass with `claude --settings .claude/conductor.settings.json`. Isolated to that launch; does NOT affect normal sessions. Enables agent teams + the no-mock PreToolUse gate. Continuation is owned by the persistent /goal (seeded by `experiment start`), NOT a Stop hook — a Stop hook here thrashes (it blocked every turn-end ~360x in one run, fighting /goal and inflating cache-reads). conductor-stop-check.sh is kept on disk but intentionally UNWIRED.",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "teammateMode": "in-process",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/conductor-gate.sh\"",
+            "statusMessage": "no-mock gate"
+          }
+        ]
+      }
+    ]
+  }
+}

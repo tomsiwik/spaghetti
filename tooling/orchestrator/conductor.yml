@@ -1,0 +1,24 @@
+# Conductor — multi-model experiment orchestration config.
+# Edit POLICY here (models, roles, queue, experiment defaults). The Python is just mechanism.
+
+models:                         # how to reach each model CLI (cmd type drives invocation)
+  gemini: { cmd: gemini, model: gemini-pro, timeout: 200 }
+  gpt:    { cmd: codex,   model: gpt-5.5,   timeout: 240 }
+  opus:   { cmd: claude,  model: opus,      timeout: 300 }
+
+roles:                          # which model plays which role (from the cross-model eval)
+  explore:     gemini           # widest divergence — angles / hunches
+  systematize: gpt              # strict falsifiable framing (spark) + best-effort codegen
+  synthesize:  opus             # novelty + grounding (spark); conductor reasoning
+
+spark_source: tooling/spark/pipeline_gap/3_systematize.txt   # systematized hypotheses live here
+run_timeout: 300
+codegen: true                   # let `systematize` model attempt run_experiment.py (fallback if rejected)
+
+experiment:                     # defaults applied when filing each experiment
+  scale: micro
+  tags: [conductor, novel]
+  kill: "target separability does not drop when the gap is collapsed"
+
+queue:                          # default queue (or pass a queue.json path to the CLI)
+  - { finding: exp_gap_as_signal, exp_name: exp_gap_collapse_inproc, hypothesis: 1 }

@@ -1,0 +1,32 @@
+[
+  {
+    "problem": "Given a static set of N integer keys known in advance, build a lookup table that answers membership/index queries in guaranteed O(1) worst-case time with no per-query collisions and near-N space.",
+    "obvious_approach": "Use a hash table with a good general-purpose hash function, accepting expected O(1) but worst-case O(N) on collisions, over-provisioning the array to keep load factor low.",
+    "reframe_type": "offline-construction (hashing as search over functions; perfect hashing)"
+  },
+  {
+    "problem": "Find all occurrences of a pattern P in a text T and also handle approximate matching where up to k characters may differ, computing all alignment scores efficiently.",
+    "obvious_approach": "Rabin-Karp rolling hash for exact matching, or an O(nk) kangaroo/Landau-Vishkin method with suffix-tree LCP queries for k-mismatches.",
+    "reframe_type": "cross-domain import (string matching as convolution via FFT)"
+  },
+  {
+    "problem": "Given a directed graph with possibly negative edge weights but no negative cycles, answer many shortest-path queries between arbitrary node pairs.",
+    "obvious_approach": "Bellman-Ford per source (O(VE) each) or Floyd-Warshall (O(V^3)), accepting that fast Dijkstra cannot handle negative weights.",
+    "reframe_type": "duality / gauge transform (node potentials reweight to non-negative; Johnson's)"
+  },
+  {
+    "problem": "Support a sequence of N elements with split-at-position, concatenate, and indexed access all in O(log N), to cheaply cut and join large editable text buffers.",
+    "obvious_approach": "Dynamic array / gap buffer (O(1) index but O(N) split/concat by copying), or a doubly linked list (O(1) splice but O(N) index and poor cache behavior).",
+    "reframe_type": "representation shift (index -> rank in a size-augmented balanced tree; rope)"
+  },
+  {
+    "problem": "Numerically integrate the trajectory of a frictionless orbiting body over millions of timesteps so the orbit does not slowly spiral in or out due to accumulated error.",
+    "obvious_approach": "Use a high-order Runge-Kutta integrator (RK4) with a small timestep for low local truncation error.",
+    "reframe_type": "conserve-invariant over local-accuracy (symplectic / leapfrog integrator)"
+  },
+  {
+    "problem": "Solve Ax=b for a large sparse symmetric positive-definite A that you can only access through a black-box function returning the matrix-vector product Av; you never see the entries of A.",
+    "obvious_approach": "Reconstruct A column-by-column by probing with basis vectors e_i (N matvecs), then factor it with Cholesky/LU.",
+    "reframe_type": "recast algebra as optimization (minimize the quadratic; Conjugate Gradient on matvecs)"
+  }
+]

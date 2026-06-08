@@ -1,0 +1,48 @@
+# Spark eval on the REAL production model: Claude Opus 4.8 (ralph's backend = this agent).
+# Generator = claude CLI (no API key). Judge = local qwen3:32b (free/reliable) — only
+# generations spend Opus quota. Small first run: 3 diverse problems × repeat 3 = 54 gens.
+description: "spark on Claude Opus 4.8 — do perturbation prompts beat baseline on the real model?"
+
+prompts:
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/baseline.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/invert-assumption.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/representation-shift.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/analogy-collision.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/self-question.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/constraint-removal.md
+
+providers:
+  - id: file:///Users/tom/Code/tomsiwik/llm/tooling/spark/claude_provider.js
+    label: opus-4.8
+    config:
+      model: opus
+
+defaultTest:
+  options:
+    provider:                       # judge = Claude Opus 4.8 (same as generator) — the instrument
+      id: file:///Users/tom/Code/tomsiwik/llm/tooling/spark/claude_provider.js   # must be as strong as what it measures
+      config:
+        model: opus
+  assert:
+    - type: llm-rubric
+      metric: reframe
+      value: |
+        Evaluate ONLY the core idea of this response to a hard engineering problem.
+        PASS only if it challenges a core ASSUMPTION of the problem, OR proposes a
+        fundamentally different REPRESENTATION/model of it — a genuine reframe.
+        FAIL if it mainly reconstructs or incrementally optimizes the standard
+        textbook approach. Cleverness of wording is not a reframe. Be strict.
+    - type: llm-rubric
+      metric: novelty
+      value: |
+        Rate how NON-OBVIOUS and surprising the core idea is versus the standard
+        textbook solution. 1.0 = a reframe an expert would call genuinely unexpected;
+        0.5 = a real but known alternative; 0.0 = the obvious default.
+
+tests:
+  - vars:
+      problem: "Given a static set of N integer keys known in advance, build a lookup table that answers membership/index queries in guaranteed O(1) worst-case time with no per-query collisions and near-N space."
+  - vars:
+      problem: "Find all occurrences of a pattern P in a text T and also handle approximate matching where up to k characters may differ, computing all alignment scores efficiently."
+  - vars:
+      problem: "Numerically integrate the trajectory of a frictionless orbiting body over millions of timesteps so the orbit does not slowly spiral in or out due to accumulated error."

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "experiment": {
+      "command": "bun",
+      "args": [
+        "tooling/channel/experiment-channel.ts"
+      ]
+    }
+  }
+}

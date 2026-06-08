@@ -109,6 +109,19 @@ export default class Run extends Command {
     if (flags["no-wait"]) {
       this.log(`Queue: pueue status --group ${group}`);
       this.log(`Logs:  pueue follow ${taskId}`);
+      // Arm a detached per-run watcher: when THIS task completes, push an `exp_done`
+      // finish-event to the conductor session's channel. Scoped to this run, ~0 tokens,
+      // no global pueue.yml mutation. Harmless no-op if no conductor channel is running.
+      const dir = script.replace(/\/[^/]+$/, "");
+      const home = process.env.HOME ?? "";
+      const watch =
+        `export PATH="${home}/.local/bin:${home}/.vite-plus/bin:${home}/.bun/bin:/opt/homebrew/bin:$PATH"; ` +
+        `pueue wait ${taskId} >/dev/null 2>&1; ` +
+        `v=$(python3 -c "import json;print(json.load(open('${dir}/results.json')).get('verdict',''))" 2>/dev/null); ` +
+        `experiment notify --kind exp_done --exp "${label}" --verdict "$v" >/dev/null 2>&1`;
+      const w = spawn("bash", ["-c", watch], { detached: true, stdio: "ignore" });
+      w.unref();
+      this.log(`exp_done watcher armed for task ${taskId} (fires when the run completes).`);
       return;
     }
 

@@ -1,0 +1,62 @@
+# Spark prompt bank — v1 eval
+# Question under test: do small "perturbation" prompts beat a plain baseline at
+# producing genuine REFRAMES (not reconstructions) on neutral problems?
+# Fully local via ollama ($0). Generator temp high (divergence); judge temp 0.
+description: "spark v1 — perturbation prompts vs baseline: reframe-rate + novelty"
+
+prompts:
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/baseline.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/invert-assumption.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/representation-shift.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/analogy-collision.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/self-question.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/constraint-removal.md
+
+providers:
+  - id: ollama:chat:gemma4:latest
+    label: gemma4-gen
+    config:
+      temperature: 0.9
+      think: false       # gemma4 is a thinking model; disable → concise, complete, fast
+      num_predict: 600
+
+defaultTest:
+  options:
+    # judge (grader) — gemma4 think:false (fast; embedding metrics in score.py backstop ~10% JSON flakiness)
+    provider:
+      id: ollama:chat:gemma4:latest
+      config:
+        temperature: 0
+        think: false
+        num_predict: 400
+  assert:
+    - type: llm-rubric
+      metric: reframe
+      value: |
+        Evaluate ONLY the core idea of this response to a hard engineering problem.
+        PASS only if it challenges a core ASSUMPTION of the problem, OR proposes a
+        fundamentally different REPRESENTATION/model of it — a genuine reframe.
+        FAIL if it mainly reconstructs or incrementally optimizes the standard
+        textbook approach. Cleverness of wording is not a reframe. Be strict.
+    - type: llm-rubric
+      metric: novelty
+      value: |
+        Rate how NON-OBVIOUS and surprising the core idea is versus the standard
+        textbook solution. Score 1.0 = a reframe an expert would call genuinely
+        unexpected; 0.5 = a real but known alternative; 0.0 = the obvious default.
+
+# 6 hard neutral problems (workflow-vetted; each has a real obvious-default and a non-obvious reframe).
+# Full obvious_approach text in problems.json (used by score.py for embedding-novelty).
+tests:
+  - vars:
+      problem: "Given a static set of N integer keys known in advance, build a lookup table that answers membership/index queries in guaranteed O(1) worst-case time with no per-query collisions and near-N space."
+  - vars:
+      problem: "Find all occurrences of a pattern P in a text T and also handle approximate matching where up to k characters may differ, computing all alignment scores efficiently."
+  - vars:
+      problem: "Given a directed graph with possibly negative edge weights but no negative cycles, answer many shortest-path queries between arbitrary node pairs."
+  - vars:
+      problem: "Support a sequence of N elements with split-at-position, concatenate, and indexed access all in O(log N), to cheaply cut and join large editable text buffers."
+  - vars:
+      problem: "Numerically integrate the trajectory of a frictionless orbiting body over millions of timesteps so the orbit does not slowly spiral in or out due to accumulated error."
+  - vars:
+      problem: "Solve Ax=b for a large sparse symmetric positive-definite A that you can only access through a black-box function returning the matrix-vector product Av; you never see the entries of A."

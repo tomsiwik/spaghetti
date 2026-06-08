@@ -1,0 +1,46 @@
+# Cross-model validation: do the spark prompts generalize across the 3 frontier models
+# the agents actually run on? Generators = Claude Opus 4.8, GPT-5.5 (codex), newest Gemini
+# (all via their CLIs). Judge = Opus (consistent instrument). + free embedding metrics
+# (diversity, novelty_e) via score.py — the unbiased cross-model signal.
+description: "spark cross-model — Opus 4.8 vs GPT-5.5 vs Gemini: do perturbation prompts beat baseline on each?"
+
+prompts:
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/baseline.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/invert-assumption.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/representation-shift.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/analogy-collision.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/self-question.md
+  - file:///Users/tom/Code/tomsiwik/llm/tooling/spark/prompts/constraint-removal.md
+
+providers:
+  - id: file:///Users/tom/Code/tomsiwik/llm/tooling/spark/claude_provider.js
+    label: opus-4.8
+    config: { model: opus }
+  - id: file:///Users/tom/Code/tomsiwik/llm/tooling/spark/codex_provider.js
+    label: gpt-5.5
+    config: { model: gpt-5.5 }
+  - id: file:///Users/tom/Code/tomsiwik/llm/tooling/spark/gemini_provider.js
+    label: gemini
+
+defaultTest:
+  options:
+    provider:                       # judge = Claude Opus 4.8 (consistent across all 3 generators)
+      id: file:///Users/tom/Code/tomsiwik/llm/tooling/spark/claude_provider.js
+      config: { model: opus }
+  assert:
+    - type: llm-rubric
+      metric: reframe
+      value: |
+        Evaluate ONLY the core idea of this response to a hard engineering problem.
+        PASS only if it challenges a core ASSUMPTION of the problem, OR proposes a
+        fundamentally different REPRESENTATION/model of it — a genuine reframe.
+        FAIL if it mainly reconstructs or incrementally optimizes the standard
+        textbook approach. Cleverness of wording is not a reframe. Be strict.
+
+tests:
+  - vars:
+      problem: "Given a static set of N integer keys known in advance, build a lookup table that answers membership/index queries in guaranteed O(1) worst-case time with no per-query collisions and near-N space."
+  - vars:
+      problem: "Find all occurrences of a pattern P in a text T and also handle approximate matching where up to k characters may differ, computing all alignment scores efficiently."
+  - vars:
+      problem: "Numerically integrate the trajectory of a frictionless orbiting body over millions of timesteps so the orbit does not slowly spiral in or out due to accumulated error."

@@ -1,0 +1,21 @@
+{
+  "_comment": "The program's own breakthrough-shaped experiments, mined + ranked from the DB. Use as (1) reference for grading whether a candidate hunch is breakthrough-shaped like our best, and (2) a novelty anchor (a strong new hunch should not duplicate these). move_type taxonomy: invert-axiom | import-as-invariant | axis-shift | impossibility-kill.",
+  "exemplars": [
+    {"ref": "exp_gap_as_signal", "move_type": "invert-axiom", "novelty": 5, "status": "proven", "reframe": "Composition interference IS the routing signal, not error to destroy. Gap magnitude predicts calibration (~1/gap); a router falls out of inter-expert geometry, untrained."},
+    {"ref": "F#294", "move_type": "invert-axiom", "novelty": 5, "status": "killed", "reframe": "Correctness lives only in logit space (post lm_head), not the residual stream. Probes on last-token hidden state are at chance — kills the hidden-state-verifier family."},
+    {"ref": "F#241", "move_type": "import-as-invariant", "novelty": 5, "status": "supported", "reframe": "Sheaf cohomology H^1 (Betti number of the Cech nerve) predicts bridge-adapter rank as an INTEGER (H^1=3 => rank>=3), with a phase transition at k=3. Interference as an irreducible cohomological obstruction."},
+    {"ref": "exp_self_routing_adapters", "move_type": "impossibility-kill", "novelty": 5, "status": "supported", "reframe": "Concentration of measure: at d/r=160 every rank-16 subspace captures equal energy, so weight-subspace routing provably can't discriminate; a zero-param centroid beats a trained 659K-param router."},
+    {"ref": "F#244", "move_type": "import-as-invariant", "novelty": 5, "status": "killed", "reframe": "Interference-free and contrastive-decode-value are mathematical DUALS: the orthogonality that makes merging clean makes the contrastive 'amateur' signal pure noise. Mutually exclusive by construction."},
+    {"ref": "exp_rdt_loop_lora_gemma4", "move_type": "axis-shift", "novelty": 5, "status": "provisional", "reframe": "Loop-indexed LoRA on the DEPTH axis: adapter index = a clock tick; cycle a frozen block T times -> feed-forward transformer becomes recurrent. Compute-adaptive reasoning, zero parameter growth."},
+    {"ref": "F#272", "move_type": "invert-axiom", "novelty": 4, "status": "killed", "reframe": "Ternary models have no knowledge subspace: flat singular spectrum makes low-rank knowledge-protection mathematically void. The top-k-subspace assumption is an FP16 property, not a knowledge property."},
+    {"ref": "F#383", "move_type": "import-as-invariant", "novelty": 4, "status": "supported", "reframe": "SLERP/dual-quaternion candy-wrapper inversion: importing the animation 'fix' makes blending WORSE, proving magnitude is irrelevant and only direction matters."},
+    {"ref": "F#183", "move_type": "impossibility-kill", "novelty": 4, "status": "killed", "reframe": "A Neyman-Pearson-optimal gate (energy gap) that can never fire: dE<0 for all 25/25 pairs (more params always lower NLL). Optimal-but-vacuous; separates RANKING from GATING."},
+    {"ref": "F#278", "move_type": "invert-axiom", "novelty": 4, "status": "killed", "reframe": "Domain purity lives in the LOW singular-value tail (corr=-0.587 with SV); 'keep top-k energy' is exactly backwards. The importance metric itself is inverted."}
+  ],
+  "recipe": [
+    "Invert the field's foundational axiom: name the unspoken assumption every paper shares, ask 'what if the opposite carries the information?'",
+    "Import a distant primitive as an INVARIANT/IMPOSSIBILITY, not a recipe. Discriminator: does it yield a theorem/invariant, or just a faster gate? (reject data-structure-as-router imports.)",
+    "Relocate a known primitive onto an unused axis (depth, time/version, decode-step, frequency).",
+    "Prove impossibility by construction; a clean kill that yields a reusable theorem outranks a supported-but-routine blend."
+  ]
+}

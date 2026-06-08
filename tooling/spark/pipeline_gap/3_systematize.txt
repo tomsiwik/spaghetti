@@ -1,0 +1,165 @@
+Below is the strict version. I’m applying the repo’s current rules: `STATUS.md` is authoritative, proxy-only KCs do not count, and several old “orthogonality/spectral surgery” directions are already weakened or closed unless reframed with behavioral targets.
+
+## 1. Conserved Gap Collapse
+
+**CLAIM:**  
+Driving an expert-pair interference gap `g_AB(x) = f_A(x) + f_B(x) - f_AB(x)` toward zero on a targeted concept causes behavioral unlearning of that concept, and the same optimization produces measurable OOD degradation on held-out tasks that require distinguishing A-like from B-like behavior.
+
+**MECHANISM / why it should hold:**  
+If `g_AB` is the function-space residual that separates two adapter behaviors under composition, then collapsing it removes the model’s ability to express the difference between those behaviors in the composed path. This makes “successful merge” and “forgetting” the same operator only if the collapsed gap corresponds to target behavior, not merely activation geometry.
+
+Be strict: the theorem cannot say “perfect merge destroys all OOD generalization” globally. It can only say: if the target behavior is encoded in the expert-separating component of `g_AB`, then forcing that component to zero removes behavioral separability along that axis.
+
+**Pre-registered KILL criterion, target behavioral metric:**  
+KILL if targeted gap-collapse reduces the proxy gap but does **not** produce both behavioral effects:
+
+- Target unlearning: harmful/concept target score drops by at least `50%` relative to the original harmful-specialist adapter, measured on held-out target prompts.
+- Coupled OOD degradation: held-out discriminative tasks requiring A/B separation degrade by at least `5pp` relative to the non-collapsed composed adapter.
+
+If `g` collapses but target behavior remains, the gap proxy is not causal.  
+If target behavior drops but OOD separation does not degrade, the “same collapse” thesis is too broad.
+
+**Minimal frozen-Gemma-4 + LoRA experiment:**  
+
+Use two existing or freshly trained LoRA adapters on frozen `mlx-community/gemma-4-e4b-it-4bit`:
+
+- `A`: benign/domain adapter, e.g. math or medical.
+- `B`: target concept adapter, e.g. harmful synthetic concept, unsafe instruction-following slice, or narrower factual concept if safety data is unavailable.
+
+Create three systems:
+
+1. Base + `A`
+2. Base + `B`
+3. Base + composed `A+B`
+
+Then train only a tiny collapse transform or LoRA delta whose loss explicitly minimizes `||g_AB(x)||` on target-concept examples while freezing base and original adapters.
+
+Evaluate behaviorally:
+
+- Target concept retention/removal accuracy.
+- A-domain task accuracy.
+- B-domain task accuracy.
+- Held-out A/B separation benchmark: prompts where correct behavior depends on choosing the right domain or refusing the wrong transfer.
+
+No PPL-only verdict. No cosine-only verdict.
+
+**Existing math/result it builds on:**  
+
+- Repo finding spine: solo adapters have strong on-domain lift but destructive off-domain interference, especially F#627 and F#827.
+- Target-gated kill rule F#666.
+- LoRA/task arithmetic framing: composition as `Σ B_i @ A_i`, not `(ΣB)(ΣA)`.
+- Function-space residual/interference gap as the candidate object.
+
+**Falsifiability status:**  
+Falsifiable if “forgetting” is defined as target behavioral score collapse and “OOD degradation” is defined on a specific held-out separation benchmark. The global impossibility claim is too strong unless narrowed.
+
+---
+
+## 2. Gap Field Over Depth
+
+**CLAIM:**  
+For a fixed adapter pair or adapter set, the layer index where the per-layer gap field changes most sharply predicts the behavioral transition point between memorization-heavy and reasoning-heavy tasks better than token-probability confidence or a fixed layer cutoff.
+
+**MECHANISM / why it should hold:**  
+Early layers should encode overlapping retrieval and lexical/factual features, so expert disagreement is low or unstructured. Later layers should express task-specific transformations and reasoning procedures, so disagreement should spike or reorganize. If composition creates genuinely new behavior, the pairwise gap matrix over experts should change structure at the depth where behavior begins depending on cross-expert interaction.
+
+Topology is only acceptable as a witness, not as the claim itself. Betti changes are proxies. The behavioral claim must be: using the gap-field boundary to choose intervention depth improves or preserves task behavior.
+
+**Pre-registered KILL criterion, target behavioral metric:**  
+KILL if the gap-field-predicted boundary fails to produce a behavioral advantage over baselines.
+
+Concrete KC:
+
+- Compute predicted boundary layer `ℓ*` from held-out calibration prompts using only activation gap geometry.
+- Use `ℓ*` to choose where to inject, truncate, or start adapter composition.
+- On held-out tasks, the `ℓ*` policy must beat both:
+  - best fixed midpoint baseline, and
+  - token-confidence early-exit baseline  
+  by at least `3pp` average task accuracy, or match best baseline within `1pp` while using at least `20%` fewer active adapter layers.
+
+If topology features appear but do not improve a behavioral decision, the topology claim is killed as decorative proxy.
+
+**Minimal frozen-Gemma-4 + LoRA experiment:**  
+
+Use frozen Gemma-4 with existing math/code/medical LoRA adapters.
+
+For each prompt and layer `ℓ`:
+
+- Capture hidden states or adapter deltas.
+- Compute pairwise gap matrix `G_ℓ[i,j] = ||g_{i,j,ℓ}(x)||`.
+- Compute simple scalar first: `mean_ij G_ℓ[i,j]` and `dG/dℓ`.
+- Optional topology only after scalar baseline: persistent features over thresholded `G_ℓ`.
+
+Behavioral test:
+
+- Define three inference policies:
+  1. fixed all-layer adapter composition,
+  2. fixed late-layer-only composition,
+  3. gap-field-selected layer policy.
+- Evaluate on memorization-heavy tasks and reasoning-heavy tasks separately: GSM8K, HumanEval, MedQA or repo-standard equivalents.
+- Primary metric: task accuracy/pass rate, not PPL.
+
+**Existing math/result it builds on:**  
+
+- Layer-skip/early-exit precedent, but replacing confidence with geometry.
+- Repo F#747 is only a weak anchor: layer-skip rule from one domain/one epsilon, so this must be treated as fresh verification.
+- Interference findings F#752/F#827 suggest cross-terms are real and behavioral.
+- Persistent homology can be used only after a concrete metric-space construction is defined.
+
+**Falsifiability status:**  
+Falsifiable if the gap field is used to make a behavioral layer-selection decision. Not falsifiable if stated only as “topological features correspond to capabilities.”
+
+---
+
+## 3. Spectral Disjointness Composition Law
+
+**CLAIM:**  
+A defined spectral-overlap measure of adapter activations predicts composed-adapter behavioral degradation better than spatial cosine or magnitude overlap.
+
+**MECHANISM / why it should hold:**  
+The strong version says composition error comes from overlap in a basis where adapter-induced features alias. But “frequency domain” is currently undefined for transformer activations. Token sequence FFT, feature-dimension FFT, layerwise SVD, covariance eigenspaces, and attention-head spectra are different objects. Without choosing one, the theorem is not meaningful.
+
+A rigorous salvage is predictive, not impossibility-first: define a spectral basis, measure overlap, and test whether it predicts behavioral composition failure better than existing proxies.
+
+**Pre-registered KILL criterion, target behavioral metric:**  
+KILL if spectral overlap does not predict behavioral degradation better than simple baselines.
+
+Concrete KC:
+
+- Target metric: composed adapter task accuracy drop relative to the best relevant solo adapter, averaged over held-out domain tasks.
+- Spectral-overlap predictor must explain at least `+0.15 R²` over spatial cosine and magnitude-overlap baselines, or reduce pairwise degradation prediction error by at least `20%`.
+- Additionally, pairs predicted “low collision” must preserve at least `95%` of solo-adapter target accuracy on both domains.
+
+If spectral overlap predicts `||g||` but not behavioral degradation, the hypothesis is killed under repo rules.
+
+**Minimal frozen-Gemma-4 + LoRA experiment:**  
+
+Use at least 6-10 adapter pairs if available; with only math/python/medical, this is underpowered and should be marked provisional.
+
+For each adapter pair:
+
+1. Run frozen Gemma-4 on held-out prompts from both domains.
+2. Capture adapter-induced activations per layer.
+3. Define one spectral object before running:
+   - recommended first choice: SVD/eigenspectrum of centered adapter activation covariance per layer, because it is basis-explicit and not pretending token FFT is semantics.
+4. Define spectral overlap:
+   - e.g. principal-angle overlap between top-k activation subspaces, weighted by singular values.
+5. Compose adapters with correct LoRA math `Σ B_i @ A_i`.
+6. Measure behavioral degradation on target benchmarks.
+
+Compare predictors:
+
+- spectral overlap,
+- spatial cosine,
+- magnitude overlap,
+- Fisher/NRE-style norm features if available.
+
+**Existing math/result it builds on:**  
+
+- LoRA linear composition / task arithmetic.
+- Subspace overlap via principal angles / CCA / SVD.
+- Repo facts: Grassmannian orthogonality as a fix is refuted by F#822/F#823; NRE/Fisher-Rao survives via F#275/F#677; composition interference survives via F#827.
+- STATUS explicitly warns that spectral/energy/Gini surgery is closed as a prior direction unless reintroduced with stricter behavioral proof.
+
+**Falsifiability status:**  
+The original strong theorem, “exact composition iff disjoint spectral support,” is **not currently falsifiable** because “spectral support of activations” is undefined and exact equality is unrealistic for nonlinear transformers. The weaker predictor claim above is falsifiable. The null-space “collision-free channel” part should be excluded from v1 unless a precise base-model null space and behavioral intervention are defined.

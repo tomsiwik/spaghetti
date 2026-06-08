@@ -1,0 +1,43 @@
+Three merges. I discarded #7 as a standalone (entropy-invariant "stop adding experts" is a utility-calculator, not a reframe) and absorbed its conservation idea into #1; I recast #3's topology away from "holes = capabilities = router" (rejected data-structure-as-router) into an invariant over depth.
+
+---
+
+## 1. The Gap is a Conserved Charge — Merging and Forgetting Are the Same Collapse
+
+*(merges #6 axiom-inversion + #8 impossibility + #7 invariant)*
+
+**HUNCH:** Catastrophic forgetting and "successful merging" are the identical event — the collapse of the interference gap `g` to zero — so unlearning a concept is just deliberately driving its expert-pair gap to zero, and any optimizer that perfects a merge provably destroys OOD generalization.
+
+**MECHANISM:** The proven result says `g` *carries* the routing information; information that is carried is information that can be conserved or destroyed. The field treats `g→0` as the goal (TIES/DARE/Soups minimize it) and treats forgetting as an accident of weight-overwriting. Invert: both are the *same* loss of the gap. If `g = f_A + f_B − f_AB` is the discriminative signal between two experts, then `g=0` means the composed model can no longer tell A-behavior from B-behavior at `x` — which is exactly what forgetting *is* behaviorally. This yields a clean impossibility-kill: continuous optimization that drives `g→0` everywhere is, by construction, optimizing for zero inter-expert discriminability, which is isomorphic to collapsing the two function-space directions into one — overfitting in the strict sense. **Theorem shape:** a merged model with `‖g‖→0` on its training support has provably ≤ the OOD-separating capacity of either parent. "Perfectly merged = perfectly overfit."
+
+**WHY NON-OBVIOUS:** The entire merging field spends its effort *minimizing the very quantity that you've shown is the signal*. Nobody connects forgetting to merging because one is framed as failure and the other as success — the inversion reveals they are one operator run in opposite directions. The payoff is surgical: unlearning becomes a *targeted gap-collapse* on one expert pair (constructive, testable on frozen Gemma-4: drive `g_{A,B}→0` for the harmful pair, measure both target-concept removal **and** OOD degradation on held-out — the impossibility predicts they rise together).
+
+---
+
+## 2. The Gap is a Field over Depth — Its Topology Localizes the Memorization→Reasoning Transition
+
+*(merges #2 relocation-onto-depth + #3 topology-as-invariant, de-routered)*
+
+**HUNCH:** `g` is not a scalar but a field `g(ℓ)` across transformer layers; the derivative `dG/dℓ` and the birth/death of topological features in the per-layer N-expert gap matrix mark the exact depth where memorization gives way to reasoning — derivable geometrically, before any token probability is read.
+
+**MECHANISM:** Relocate the proven micro-scale geometry onto the *unused depth axis*. At early/memorization layers, experts retrieve overlapping factual content → activations correlate → small gap. At reasoning layers, experts must combine non-redundant computation → orthogonalize → gap spikes. So `dG/dℓ` has a sharp peak at the phase boundary. Import topology as the **invariant** (not a router): build the pairwise gap matrix `G_ℓ[i,j] = ‖g_{i,j}(x)‖` at each depth, track its persistent-homology features across ℓ. A capability that is absent in every individual expert appears as a *topological feature that is born at a specific depth and persists* — a Betti-number change in the interference structure is the signature of emergent composition, invariant to which expert "fires." The invariant claim: capability emergence is detectable as a change in interference topology, independent of single-expert magnitudes.
+
+**WHY NON-OBVIOUS:** Layer-truncation / early-exit work keys on token-probability confidence or learned classifiers — a *behavioral* proxy. This says the transition is *geometric* and visible in the disagreement structure alone, with no decoding. And the topology move escapes the "data-structure-as-router" trap: Betti numbers here are not selecting an expert, they're a coordinate-free *witness* of where novel computation lives. Directly runnable: frozen Gemma-4 exposes every layer's activations; compute `g(ℓ)` for adapter pairs and look for the `dG/dℓ` peak and the persistent feature.
+
+---
+
+## 3. Spectral Disjointness is the True Composition Law — Spatial Pruning is a Flawed Proxy
+
+*(merges #4 impossibility + #1 null-space parallel pass)*
+
+**HUNCH:** Linear composition of correlated experts is mathematically impossible without degradation *unless their activations are disjoint in the frequency domain*; therefore TIES/DARE (magnitude/spatial pruning) are provably approximations of spectral orthogonality, and the gap projected into the base model's null space is a clean spectral channel where adapters compose without collision.
+
+**MECHANISM:** The proven result uses spatial cosine (`cos≈0` ⇒ max gap ⇒ clean routing). Push the axiom: spatial orthogonality is a *special case* of the real condition — disjoint **spectral support**. Two experts with `cos≈0.5` (correlated, slow/impossible calibration) may still have *overlapping frequency bands* that alias into each other under linear addition; that aliasing **is** the residual gap that can't be calibrated away. **Theorem shape:** for two adapters, `f_A + f_B = f_AB` exactly iff their activation spectra have disjoint support; the irreducible composition error is the spectral-overlap energy. This kills magnitude pruning as fundamentally aliased — it prunes the wrong basis. The constructive payoff from #1: the base model acts as a damping field whose null space is a subspace where the adapters' shared spectral mass is suppressed; projecting `g` into that null space gives a collision-free channel where correlated experts can run a *parallel* composed pass that's impossible in the full space.
+
+**WHY NON-OBVIOUS:** Every merging method operates in the spatial/parameter basis because that's where the weights live — the claim that the *correct* invariant is spectral reframes the whole field's tooling as a basis error, not a heuristic-tuning problem. It also explains your own `cos≥0.5` "impossible calibration" cliff mechanistically: it's not that the experts are "too similar," it's that their spectra alias. Testable: FFT (or learned spectral decomposition) of adapter activations on frozen Gemma-4; predict the irreducible `‖g‖` from spectral-overlap energy and show it beats spatial-cosine as a calibration predictor — and that null-space projection recovers composition where naive addition fails.
+
+---
+
+**Ranking by foundability:** #1 (cleanest theorem, cheapest experiment) > #2 (rich, needs persistent-homology care to avoid over-claiming) > #3 (most ingenious, highest risk — "spectral support of activations" needs a rigorous definition before the impossibility bites).
+
+Want me to spec the minimal frozen-Gemma-4 experiment for any one of these (I'd start with #1's gap-collapse-vs-OOD curve — it's a single training run with a falsifiable prediction)?
