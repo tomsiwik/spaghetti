@@ -17,10 +17,12 @@
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 
-const SESSION = process.env.CLAUDE_CODE_SESSION_ID ?? "unknown";
-const PORT = Number(process.env.EXPERIMENT_CHANNEL_PORT ?? 8765);
+const SESSION = process.env.CLAUDE_CODE_SESSION_ID ?? `pid${process.pid}`;
+// Port 0 = OS-assigned, so any number of conductor instances coexist on one machine.
+// EXPERIMENT_CHANNEL_PORT pins it (single-instance / debugging).
+const PORT = Number(process.env.EXPERIMENT_CHANNEL_PORT ?? 0);
 const ROOT = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 
 const mcp = new Server(
@@ -47,18 +49,7 @@ function toMeta(o: Record<string, unknown>): Record<string, string> {
   return m;
 }
 
-// Registry so producers can find this session's port (single conductor per machine for now).
-try {
-  mkdirSync(`${ROOT}/.ralph/agent`, { recursive: true });
-  writeFileSync(
-    `${ROOT}/.ralph/agent/conductor_channel.json`,
-    JSON.stringify({ sessionId: SESSION, port: PORT, pid: process.pid }, null, 2),
-  );
-} catch {
-  /* best effort */
-}
-
-Bun.serve({
+const server = Bun.serve({
   port: PORT,
   hostname: "127.0.0.1",
   async fetch(req) {
@@ -84,3 +75,31 @@ Bun.serve({
     return new Response("ok");
   },
 });
+
+// Per-session registry so producers (`experiment notify`) can find every live conductor's
+// port. One file per session under .ralph/agent/channels/; removed on exit. The legacy
+// single-file registry is kept for back-compat with watchers armed before this change.
+const CHANNELS_DIR = `${ROOT}/.ralph/agent/channels`;
+const regFile = `${CHANNELS_DIR}/${SESSION.replace(/[^A-Za-z0-9_-]/g, "_")}.json`;
+const entry = JSON.stringify({ sessionId: SESSION, port: server.port, pid: process.pid }, null, 2);
+try {
+  mkdirSync(CHANNELS_DIR, { recursive: true });
+  writeFileSync(regFile, entry);
+  writeFileSync(`${ROOT}/.ralph/agent/conductor_channel.json`, entry);
+} catch {
+  /* best effort */
+}
+const cleanup = () => {
+  try {
+    rmSync(regFile, { force: true });
+  } catch {
+    /* best effort */
+  }
+};
+process.on("exit", cleanup);
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+  process.on(sig, () => {
+    cleanup();
+    process.exit(0);
+  });
+}

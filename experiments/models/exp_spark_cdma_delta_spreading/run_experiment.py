@@ -57,7 +57,9 @@ N_HUMANEVAL = 50
 MAX_NEW_TOKENS = 1024     # thinking-mode headroom
 SEED = 42
 P_SEED = 1337             # fixed seed for the orthogonal rotation
-D_OUT = 2048              # q_proj output dim
+# NOTE: P's dimension is NOT hardcoded — it is built lazily at the true q_proj
+# delta-output width discovered from the model on first forward (see RotBox), so it
+# can never drift from the base model. Earlier hardcoded 2048 crashed the D arm.
 N_LAYERS_EXPECTED = 42
 
 # Kill thresholds (pp, fractional)
@@ -102,6 +104,25 @@ def make_orthogonal(d, seed):
     return P
 
 
+class RotBox:
+    """Lazily builds the fixed seeded orthogonal P at the TRUE delta-output width on first use.
+
+    Drift-proof: the dim is whatever the model's q_proj delta actually emits, never hardcoded.
+    P is built once per dim, cached, and reused (FIXED, never learned) across all 42 layers.
+    """
+    def __init__(self, seed):
+        self.seed = seed
+        self._cache = {}
+
+    def get(self, d):
+        P = self._cache.get(d)
+        if P is None:
+            log(f"  [RotBox] building fixed orthogonal P at delta-output dim d={d}")
+            P = make_orthogonal(d, self.seed)
+            self._cache[d] = P
+        return P
+
+
 # ----------------------------------------------------------------------------
 # Composed q_proj wrapper: base + code delta + R·(math delta)
 # subclass nn.Module + setattr (NEVER __call__ override on instance — F#831)
@@ -113,7 +134,7 @@ class ComposedQProj(nn.Module):
     R is identity (None) or the fixed Pᵀ rotation applied to the math delta OUTPUT.
     """
     def __init__(self, base_linear, ac, bc, am, bm, scale,
-                 use_code, use_math, rot):
+                 use_code, use_math, rot_box):
         super().__init__()
         self.linear = base_linear            # frozen QuantizedLinear
         self.ac, self.bc = ac, bc            # code: (in,r),(r,out)
@@ -121,19 +142,22 @@ class ComposedQProj(nn.Module):
         self.scale = scale
         self.use_code = use_code
         self.use_math = use_math
-        self.rot = rot                       # None or Pᵀ (out,out)
+        # rot_box is None (identity) or a RotBox holding the fixed orthogonal P,
+        # built lazily at the TRUE math delta-output width discovered on first call.
+        self.rot_box = rot_box
         self.linear.freeze()
 
     def __call__(self, x):
         y = self.linear(x)
         if self.use_code:
-            dc = (x @ self.ac) @ self.bc                  # (..., out)  = s? applied below
+            dc = (x @ self.ac) @ self.bc                  # (..., d_delta)
             y = y + (self.scale * dc).astype(x.dtype)
         if self.use_math:
-            dm = (x @ self.am) @ self.bm                  # math delta output (..., out)
+            dm = (x @ self.am) @ self.bm                  # math delta output (..., d_delta)
             dm = self.scale * dm
-            if self.rot is not None:
-                dm = dm @ self.rot                        # rotate OUTPUT: row-vector δ @ P realizes Pᵀδ
+            if self.rot_box is not None:
+                P = self.rot_box.get(dm.shape[-1])        # P built at the REAL delta width
+                dm = dm @ P                               # rotate OUTPUT: row-vector δ @ P realizes Pᵀδ
             y = y + dm.astype(x.dtype)
         return y
 
@@ -142,8 +166,12 @@ def get_lm(model):
     return model.language_model if hasattr(model, "language_model") else model
 
 
-def attach_composed(model, code_ad, math_ad, scale, use_code, use_math, rot):
-    """Wrap q_proj on every layer with ComposedQProj. Returns count wrapped."""
+def attach_composed(model, code_ad, math_ad, scale, use_code, use_math, rot_box):
+    """Wrap q_proj on every layer with ComposedQProj. Returns count wrapped.
+
+    rot_box is None (identity) or a RotBox that builds the fixed orthogonal P at the real
+    delta-output dim on first forward — so P can never drift from the base model.
+    """
     lm = get_lm(model)
     count = 0
     for li, layer in enumerate(lm.model.layers):
@@ -157,11 +185,11 @@ def attach_composed(model, code_ad, math_ad, scale, use_code, use_math, rot):
         am = math_ad[ak].astype(mx.float32)
         bm = math_ad[bk].astype(mx.float32)
         wrapper = ComposedQProj(base_linear, ac, bc, am, bm, scale,
-                                use_code, use_math, rot)
+                                use_code, use_math, rot_box)
         setattr(layer.self_attn, "q_proj", wrapper)   # canonical: setattr
         count += 1
     mx.eval(model.parameters())
-    log(f"  Attached {count} ComposedQProj (use_code={use_code} use_math={use_math} rot={'P^T' if rot is not None else 'I'})")
+    log(f"  Attached {count} ComposedQProj (use_code={use_code} use_math={use_math} rot={'P^T' if rot_box is not None else 'I'})")
     assert count == N_LAYERS_EXPECTED, f"expected {N_LAYERS_EXPECTED} wrapped, got {count}"
     return model
 
@@ -292,10 +320,10 @@ def cond_base(problems):
     return {"pass@1": acc, "details": det}
 
 
-def cond_composed(problems, code_ad, math_ad, label, use_code, use_math, rot):
-    log(f"\n=== COND {label}: use_code={use_code} use_math={use_math} rot={'P^T' if rot is not None else 'I'} ===")
+def cond_composed(problems, code_ad, math_ad, label, use_code, use_math, rot_box):
+    log(f"\n=== COND {label}: use_code={use_code} use_math={use_math} rot={'P^T' if rot_box is not None else 'I'} ===")
     model, tok = load(MODEL_ID)
-    attach_composed(model, code_ad, math_ad, LORA_SCALE, use_code, use_math, rot)
+    attach_composed(model, code_ad, math_ad, LORA_SCALE, use_code, use_math, rot_box)
     gc.collect(); mx.clear_cache()
     acc, det = eval_humaneval(model, tok, problems)
     log_mem(f"{label}-done")
@@ -318,8 +346,9 @@ def main():
     assert ADAPTER_MATH.exists(), f"missing {ADAPTER_MATH}"
     log_mem("start")
 
-    log("\n=== Build fixed orthogonal P (applied as P^T on the math delta output) ===")
-    P = make_orthogonal(D_OUT, P_SEED)
+    # Fixed orthogonal rotation is built lazily at the TRUE q_proj delta-output dim
+    # (read from the model on first forward), never hardcoded — drift-proof.
+    rot_box = RotBox(P_SEED)
 
     log("\n=== Load data + adapters ===")
     problems = load_humaneval(N_HUMANEVAL)
@@ -329,11 +358,11 @@ def main():
     # Condition A: base
     A = cond_base(problems)
     # Condition B: code-solo (ceiling)
-    B = cond_composed(problems, code_ad, math_ad, "B", use_code=True, use_math=False, rot=None)
+    B = cond_composed(problems, code_ad, math_ad, "B", use_code=True, use_math=False, rot_box=None)
     # Condition C: naive sum (code + math, both unrotated)
-    C = cond_composed(problems, code_ad, math_ad, "C", use_code=True, use_math=True, rot=None)
-    # Condition D: delta-spread (code unrotated + math delta-output rotated by P^T)
-    D = cond_composed(problems, code_ad, math_ad, "D", use_code=True, use_math=True, rot=P)
+    C = cond_composed(problems, code_ad, math_ad, "C", use_code=True, use_math=True, rot_box=None)
+    # Condition D: delta-spread (code unrotated + math delta-output rotated by P^T at real dim)
+    D = cond_composed(problems, code_ad, math_ad, "D", use_code=True, use_math=True, rot_box=rot_box)
 
     pa, pb, pc, pd = A["pass@1"], B["pass@1"], C["pass@1"], D["pass@1"]
 
@@ -359,7 +388,7 @@ def main():
             "n_humaneval": N_HUMANEVAL,
             "max_new_tokens": MAX_NEW_TOKENS,
             "p_seed": P_SEED,
-            "d_out": D_OUT,
+            "p_dim_built": sorted(rot_box._cache.keys()),
             "k_recover_pp": K_RECOVER,
             "k_ceiling_gap_pp": K_CEILING_GAP,
             "mlx_lm": "0.31.2",

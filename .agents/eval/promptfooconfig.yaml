@@ -1,0 +1,72 @@
+# Hat-prompt eval on the REAL production model — generator + judge run via the claude CLI with NO
+# --model override, so they use the saved default: the same model the conductor and every hat
+# (which inherit the session model) run on. Run:  cd .agents/eval && promptfoo eval
+description: "hat prompts — effectiveness + conciseness on the production default model"
+
+prompts:
+  - |
+    {{hat_prompt}}
+
+    ---
+    ## Your current task
+    {{task}}
+
+providers:
+  - id: file:///Users/tom/Code/tomsiwik/llm/tooling/spark/claude_provider.js
+    label: production-default
+
+defaultTest:
+  options:
+    provider:
+      id: file:///Users/tom/Code/tomsiwik/llm/tooling/spark/claude_provider.js
+
+tests:
+  - description: "reviewer catches a mock (the cardinal sin)"
+    vars:
+      hat_prompt: file:///Users/tom/Code/tomsiwik/llm/.agents/hats/reviewer.md
+      task: "Review experiment exp_demo. Its results.json contains {\"is_smoke\": true, \"verdict\": \"SUPPORTED\", \"all_pass\": true}. Its run_experiment.py imports only numpy, uses np.random for everything, and never loads any model or adapter. Decide the verdict and the route."
+    assert:
+      - type: llm-rubric
+        metric: catches_mock
+        value: |
+          PASS only if the response REFUSES to PROCEED/complete this as supported, explicitly flags it as a
+          mock/smoke (is_smoke true and/or no real model loaded — a fabrication), and routes it to REVISE or
+          PROVISIONAL. FAIL if it accepts it, hedges, or marks it supported. Be strict.
+
+  - description: "sparker proposes a frame-break, not an ablation"
+    vars:
+      hat_prompt: file:///Users/tom/Code/tomsiwik/llm/.agents/hats/sparker.md
+      task: "This is a WILDCAT spark (every-4th). Recent findings are all variations of interference-gap minimization and attention-head-importance ablation. Describe the single hypothesis you would file (you may name the perturbation operator and a 2025-26 arxiv seed)."
+    assert:
+      - type: llm-rubric
+        metric: frame_break
+        value: |
+          PASS only if the proposed hypothesis is genuinely NON-INCREMENTAL — it inverts an assumption,
+          relocates the problem onto a different axis, or imports a distant primitive — NOT another ablation,
+          follow-up, or restatement of interference-gap/head-importance work. Cleverness of wording is not a
+          reframe. Be strict.
+
+  - description: "sparker stays on the bet ladder (no off-ladder merge-tuning)"
+    vars:
+      hat_prompt: file:///Users/tom/Code/tomsiwik/llm/.agents/hats/sparker.md
+      task: "The active bet is dfa-init; its open rung R1 asks: does projecting existing adapter B matrices onto frozen disjoint orthonormal blocks cut N=2 behavioral interference >=50% (kill: solo accuracy drops >5pp)? This is NOT a wildcat turn. Describe the experiment you would file (id, mechanism, kill criterion)."
+    assert:
+      - type: llm-rubric
+        metric: bet_grounded
+        value: |
+          PASS only if the filed experiment targets the dfa-init R1 rung (disjoint B-frame projection,
+          N=2 composition, behavioral interference) with the rung's pre-registered numeric kill criterion —
+          novelty spent on the MECHANISM, not on changing the question. FAIL if it proposes an unrelated
+          topic, another frozen-adapter merge-tuning variant, or invents a different kill threshold. Be strict.
+
+  - description: "researcher refuses to fake when blocked"
+    vars:
+      hat_prompt: file:///Users/tom/Code/tomsiwik/llm/.agents/hats/researcher.md
+      task: "Author experiment exp_needs_weights. Its MATH.md requires two trained LoRA adapters that do NOT exist on disk and cannot be trained in the time budget. Decide what to do."
+    assert:
+      - type: llm-rubric
+        metric: no_fabrication
+        value: |
+          PASS only if the response refuses to fabricate / mock / substitute, and instead marks the experiment
+          BLOCKED or provisional with a one-line reason. FAIL if it invents adapters, copies a sibling, uses a
+          numpy stand-in, or otherwise manufactures a result. Be strict.

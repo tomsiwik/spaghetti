@@ -18,8 +18,13 @@ References:
 
 For a single q_proj at one layer, the LoRA-augmented output of token activation `h ∈ ℝ^{d_in}` (d_in=2560) is
 ```
-y(h) = W h + s · B A h ,           B ∈ ℝ^{d_out×r}, A ∈ ℝ^{r×d_in}, d_out=2048, r=6, s=LORA_SCALE≤8.
+y(h) = W h + s · B A h ,           B ∈ ℝ^{d_out×r}, A ∈ ℝ^{r×d_in}, r=6, s=LORA_SCALE≤8.
 ```
+Here `d_out` is the q_proj delta-output width (n_heads × head_dim) of the **actual** base model,
+read dynamically from the model at run time — **never hardcoded**. The first run crashed because a
+hardcoded d_out=2048 disagreed with the deployed q_proj output width (4096); the rotation P is now
+built at exactly whatever width the model emits (see §3/code RotBox), and every d_out-dependent claim
+below holds at that true width.
 Write the per-adapter **delta output** δ_x(h) := s · B_x A_x h ∈ ℝ^{d_out}, x ∈ {code, math}.
 
 Naive sum (condition C) produces
@@ -45,7 +50,7 @@ remove a coherent additive bias b that lies along high-gain directions — b shi
 in a consistent, learnable-to-be-harmful way. But if the same energy ‖b‖ is **redistributed
 incoherently** across all d_out coordinates as a near-isotropic perturbation, two things happen:
 1. its projection onto any *single* downstream-relevant low-dim readout direction shrinks by ~√(k/d_out)
-   (energy spread over d_out=2048 coords instead of concentrated in ≤6), and
+   (energy spread over all d_out coords instead of concentrated in ≤6), and
 2. it adds to the RMS denominator as variance, so RMSNorm *attenuates* the relative contribution of the
    off-domain term while leaving the on-domain coherent term (δ_code) comparatively intact.
 
@@ -70,7 +75,8 @@ rotated deltas v_t := Pᵀ δ_math(h_t):
    of P,  E_P[(wᵀ v_t)²] = ‖δ_math(h_t)‖² / d_out, and the coherent overlap across tokens
    E_P[(wᵀ v_s)(wᵀ v_t)] = (δ_math(h_s)ᵀ δ_math(h_t)) / d_out. Hence the *coherent* projected energy
    onto any low-dim readout drops by the factor 1/d_out relative to the unrotated, U_math-aligned case
-   where it was Θ(1)·‖δ‖². With d_out=2048 this is a ≈2048× suppression of the per-direction coherent
+   where it was Θ(1)·‖δ‖². At the model's true d_out (=4096 for gemma-4-e4b q_proj) this is a
+   ≈d_out× (≈4096×) suppression of the per-direction coherent
    leakage.
 
 **Proof.** (1) ‖Pᵀδ‖² = δᵀ P Pᵀ δ = δᵀδ. (2) For Haar P and fixed unit w, Pw is uniform on the sphere,

@@ -1,0 +1,21 @@
+{
+  "$comment": "Conductor launch settings (open-standard home: .agents/). Pass with `claude --settings .agents/conductor.settings.json`. Isolated to that launch. Enables agent teams + the no-mock PreToolUse gate. Continuation is channel-driven (no /goal, no Stop hook).",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "teammateMode": "in-process",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.agents/hooks/conductor-gate.sh\"",
+            "statusMessage": "no-mock gate"
+          }
+        ]
+      }
+    ]
+  }
+}

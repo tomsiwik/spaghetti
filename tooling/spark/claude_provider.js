@@ -13,9 +13,11 @@ class ClaudeCliProvider {
     return this.providerId;
   }
   async callApi(prompt) {
-    const model = this.config.model || 'opus';
+    // No model config -> no --model flag: the CLI uses the user's saved default, i.e. the SAME
+    // model the conductor session (and therefore every hat, which inherits) runs on.
+    const args = ['-p', ...(this.config.model ? ['--model', this.config.model] : [])];
     try {
-      const out = execFileSync('claude', ['-p', '--model', model], {
+      const out = execFileSync('claude', args, {
         input: prompt,
         encoding: 'utf-8',
         maxBuffer: 32 * 1024 * 1024,

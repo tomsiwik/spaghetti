@@ -43,15 +43,15 @@ Three experiment types: **Verification** (proof complete, confirm predictions) �
 
 ## 3. Kill criteria & verdict rules
 
-**Behavioral outcomes over metrics.** PPL, cosine, accuracy are proxies. PPL does **not** predict task quality here (measured r≈0.08). A metric improving without behavioral progress is not a finding.
+> The lean, de-grounded rules now live in **`.agents/method.md`** — that's the source the hats follow.
+> This section is the longer reference; it does not override `method.md`, and no rule here is dogma.
 
-**Target-gated kill rule (Finding #666).** A proxy-metric KC (routing accuracy, PPL, cosine, clustering purity) does **not** alone justify a kill. Pair every proxy-KC with an explicit **target-metric KC** (task accuracy, benchmark score, behavioral quality).
-- **KILL** = proxy-KC FAIL **and** target-KC FAIL.
-- **SUPPORTED** = proxy-KC PASS **and** target-KC PASS.
-- Proxy FAIL + target PASS = finding about the proxy (mis-calibrated), not a kill.
-- Proxy PASS + target FAIL = kill with the target reason; flag the proxy as tautological.
+**Prefer behavioral outcomes over proxies** (use judgment — a proxy moving without a behavioral change is
+weak evidence, but there is no single mandatory rule, and the research stays open to whatever signal the
+*question* needs). Don't straitjacket a hypothesis to a past finding.
 
-**Kill-criteria discipline.** Pre-register K1/K2/K3 in `MATH.md` before the first run. If v1 data falsifies a KC, status is `killed` — not "criterion reformulated." Need a new KC? Design a v2 experiment; don't edit the old one in place.
+**Kill-criteria discipline.** Pre-register your refutation threshold in `MATH.md` before the first run; if
+the data crosses it, the verdict is `killed` — don't move the goalposts. Need a different criterion? Design a v2.
 
 **Verdict consistency** (before `complete --status supported`, all must hold): `results.json["verdict"] != "KILLED"`; `all_pass` is True if present; `PAPER.md` verdict has no PROVISIONAL/PARTIAL/NOT SUPPORTED/INCONCLUSIVE/DEGENERATE; `is_smoke:true` runs complete as `provisional`, never supported/killed; no KC modified since MATH.md (git history); no `type: fix` antipattern applies.
 
@@ -107,12 +107,14 @@ Anchors: LeJEPA (`arxiv:2511.08544`), LeWorldModel (`arxiv:2603.19312`).
 
 ## 8. The 3-hat loop & where state lives
 
-The autonomous `ralph.yml` loop runs three hats over this process — 🔬 **Researcher** (design + run → MATH/run/PAPER), 🔴 **Reviewer** (adversarial check → REVIEW, verdict routing), 🧠 **Analyst** (synthesis → LEARNINGS, new `type: fix` memories). The hat prompts live in `.ralph/hats/*.md`. Per `STATUS.md §6`, the steady state is **human-in-the-loop checkpoints**, not unattended looping.
+The conductor (`experiment start`) runs a **channel-driven** loop over this process — 🌶️ **Sparker** (novel mechanism for the active bet rung, or wildcat), 🔬 **Researcher** (author + async run → MATH/run/PAPER), 🔴 **Reviewer** (adversarial check → REVIEW, verdict routing), 🧠 **Analyst** (LEARNINGS + finding + PIERRE-IMPACT), 🚢 **Shipper** (supported bet findings → code on `../pierre`'s `bet/<name>` branch). Orchestration is the open-standard **`.agents/`** home: hats in `.agents/hats/*.md`, wiring in `.agents/conductor.md`, rules in `.agents/method.md`, **strategy in `.agents/bets/*.md`** (the rung ladders + gates), scaling in `.agents/fleet.md`. (`.claude/agents/*` symlink to the hats for Claude Code's loader.) Multiple conductors don't conflict — just run `experiment start` again in another tab: per-session channel ports, session-addressed `exp_done`, atomic claims.
 
 | State | Lives in |
 |---|---|
 | Per-experiment record (authoritative) | experiment DB (Turso) via `experiment` CLI |
 | Experiment files | `experiments/models/<name>/` (MATH/run/results/PAPER/REVIEW/LEARNINGS) |
+| Bet ladders + gates (strategy) | `.agents/bets/*.md` |
+| League table (branch competition) | `../pierre/LEAGUE.md` (scores also DB evidence, tag `league`) |
 | Roadmap + platform | `PLAN.md` Part 2 |
 | Verified status / source of truth | `STATUS.md` |
 | Antipatterns | `.ralph/agent/memories.md` (`type: fix`) |

@@ -114,11 +114,15 @@ export default class Run extends Command {
       // no global pueue.yml mutation. Harmless no-op if no conductor channel is running.
       const dir = script.replace(/\/[^/]+$/, "");
       const home = process.env.HOME ?? "";
+      // Address the event to the session that submitted the run, so with multiple conductor
+      // instances only the owner wakes. Empty session → notify broadcasts (single-instance).
+      const session = process.env.CLAUDE_CODE_SESSION_ID ?? "";
+      const sessionArg = session ? ` --session "${session}"` : "";
       const watch =
         `export PATH="${home}/.local/bin:${home}/.vite-plus/bin:${home}/.bun/bin:/opt/homebrew/bin:$PATH"; ` +
         `pueue wait ${taskId} >/dev/null 2>&1; ` +
         `v=$(python3 -c "import json;print(json.load(open('${dir}/results.json')).get('verdict',''))" 2>/dev/null); ` +
-        `experiment notify --kind exp_done --exp "${label}" --verdict "$v" >/dev/null 2>&1`;
+        `experiment notify --kind exp_done --exp "${label}" --verdict "$v"${sessionArg} >/dev/null 2>&1`;
       const w = spawn("bash", ["-c", watch], { detached: true, stdio: "ignore" });
       w.unref();
       this.log(`exp_done watcher armed for task ${taskId} (fires when the run completes).`);
